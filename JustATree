@@ -1,0 +1,665 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
+
+local MainWindow = Library:NewWindow("🖤 Main - Tree 🖤")
+
+local sound = game.Workspace:FindFirstChild("SoundName")
+
+if not sound then
+    sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://1840684208"
+    sound.Parent = game.Workspace
+    sound.Looped = true
+    sound.Volume = 1.6
+    sound.Name = "SoundName"
+    sound:Play()
+end
+
+local UGCLimited = MainWindow:NewSection("> UGC Limited")
+
+UGCLimited:CreateToggle("Auto Click Purchaser", function(value)
+    getgenv().AutoClickerPurchase = value
+    if value then
+        task.spawn(function()
+            while getgenv().AutoClickerPurchase do
+                local purchasePrompt = game.CoreGui:FindFirstChild("PurchasePrompt")
+                if not purchasePrompt then task.wait(1) continue end
+                local container = purchasePrompt:FindFirstChild("ProductPurchaseContainer")
+                if not container then task.wait(1) continue end
+                local animator = container:FindFirstChild("Animator")
+                if not animator then task.wait(1) continue end
+                local prompt = animator:FindFirstChild("Prompt")
+                if not prompt then task.wait(1) continue end
+                local alertContents = prompt:FindFirstChild("AlertContents")
+                if not alertContents then task.wait(1) continue end
+                local footer = alertContents:FindFirstChild("Footer")
+                if not footer then task.wait(1) continue end
+                local buttons = footer:FindFirstChild("Buttons")
+                if not buttons then task.wait(1) continue end
+                local button2 = buttons:FindFirstChild("2")
+                if not button2 then task.wait(1) continue end
+                
+                local buttonPosition = button2.AbsolutePosition
+                game:GetService("VirtualInputManager"):SendMouseButtonEvent(
+                    buttonPosition.X + 55,
+                    buttonPosition.Y + 65.5,
+                    0, true,
+                    game,
+                    1
+                )
+                task.wait()
+                game:GetService("VirtualInputManager"):SendMouseButtonEvent(
+                    buttonPosition.X + 55,
+                    buttonPosition.Y + 65.5,
+                    0, false,
+                    game,
+                    1
+                )
+                task.wait(1)
+            end
+        end)
+    end
+end)
+
+UGCLimited:CreateToggle("Auto Close Error", function(value)
+    getgenv().AutoClickerError = value
+    if value then
+        task.spawn(function()
+            while getgenv().AutoClickerError and task.wait() do
+                local purchasePrompt = game.CoreGui:FindFirstChild("PurchasePrompt")
+                if not purchasePrompt then continue end
+                local container = purchasePrompt:FindFirstChild("ProductPurchaseContainer")
+                if not container then continue end
+                local animator = container:FindFirstChild("Animator")
+                if not animator then continue end
+                local prompt = animator:FindFirstChild("Prompt")
+                if not prompt then continue end
+                local alertContents = prompt:FindFirstChild("AlertContents")
+                if not alertContents then continue end
+                local footer = alertContents:FindFirstChild("Footer")
+                if not footer then continue end
+                local buttons = footer:FindFirstChild("Buttons")
+                if buttons and buttons:FindFirstChild("1") and not buttons:FindFirstChild("2") then
+                    local button1 = buttons["1"]
+                    local position = button1.AbsolutePosition
+                    game:GetService("VirtualInputManager"):SendMouseButtonEvent(position.X + 55, position.Y + 65.5, 0, true, game, 1)
+                    task.wait()
+                    game:GetService("VirtualInputManager"):SendMouseButtonEvent(position.X + 55, position.Y + 65.5, 0, false, game, 1)
+                end
+            end
+        end)
+    end
+end)
+
+local AutoPurchaserToggle = UGCLimited:CreateToggle("Auto Purchaser", function(value)
+    if value then
+        -- Start Auto Purchaser
+        local MarketplaceService = game:GetService("MarketplaceService")
+        local environment = getgenv()
+
+        local function startAutoPurchaser()
+            environment._set = clonefunction(setthreadidentity)
+            local old
+            old = hookmetamethod(game, "__index", function(a, b)
+                task.spawn(function()
+                    environment._set(7)
+                    task.wait()
+                    environment.promptpurchaserequestedv2 = MarketplaceService.PromptPurchaseRequestedV2:Connect(
+                        function(...)
+                            local startTime = tick()
+                            t = {...}
+                            local assetId = t[2]
+                            local idempotencyKey = t[5]
+                            local purchaseAuthToken = t[6]
+                            local info = MarketplaceService:GetProductInfo(assetId)
+                            local productId = info.ProductId
+                            local price = info.PriceInRobux
+                            local collectibleItemId = info.CollectibleItemId
+                            local collectibleProductId = info.CollectibleProductId
+                            print("Double checking if we got the right info...")
+                            print("PurchaseAuthToken: " .. purchaseAuthToken)
+                            print("IdempotencyKey: " .. idempotencyKey)
+                            print("CollectibleItemId: " .. collectibleItemId)
+                            print("CollectibleProductId: " .. collectibleProductId)
+                            print("ProductId (SHOULD BE 0): " .. productId)
+                            print("Price: " .. price)
+                            print("-------------------------------------------------------")
+                            warn("FIRST PURCHASE ATTEMPT")
+                            for i, v in pairs(MarketplaceService:PerformPurchase(Enum.InfoType.Asset, productId, price,
+                                tostring(game:GetService("HttpService"):GenerateGUID(false)), true, collectibleItemId,
+                                collectibleProductId, idempotencyKey, tostring(purchaseAuthToken))) do
+                                print(i, v)
+                            end
+                            local endTime = tick()
+                            local duration = endTime - startTime
+                            print("Bought Item! Took " .. tostring(duration) .. " seconds")
+                            local input = loadstring(game:HttpGet('https://pastebin.com/raw/dYzQv3d8'))()
+                            input.press(Enum.KeyCode.F9)
+                        end)
+                end)
+                hookmetamethod(game, "__index", old)
+                return old(a, b)
+            end)
+        end
+
+        startAutoPurchaser()
+
+    else
+        -- Stop Auto Purchaser (if needed, clear connections or reset)
+        warn("Auto Purchaser Stopped")
+    end
+end)
+
+local AutoPurchaserToggle = UGCLimited:CreateToggle("Auto Purchaser V2", function(value)
+    if value then
+        -- Start Auto Purchaser V2
+        local MarketplaceService = game:GetService("MarketplaceService")
+        local HttpService = game:GetService("HttpService")
+        local environment = getgenv()
+
+        local function getProductInfo(assetId)
+            local success, info = pcall(function()
+                return MarketplaceService:GetProductInfo(assetId)
+            end)
+            if success then
+                return info
+            else
+                warn("Failed to retrieve product info for assetId " .. tostring(assetId))
+                return nil
+            end
+        end
+
+        local function performPurchase(assetId, price, collectibleItemId, collectibleProductId, idempotencyKey, purchaseAuthToken)
+            local success, result = pcall(function()
+                return MarketplaceService:PerformPurchase(
+                    Enum.InfoType.Asset,
+                    assetId,
+                    price,
+                    tostring(HttpService:GenerateGUID(false)),
+                    true,
+                    collectibleItemId,
+                    collectibleProductId,
+                    idempotencyKey,
+                    tostring(purchaseAuthToken)
+                )
+            end)
+
+            if success then
+                for i, v in pairs(result) do
+                    print(i, v)
+                end
+                return true
+            else
+                warn("Failed to perform purchase: " .. tostring(result))
+                return false
+            end
+        end
+
+        local function startAutoPurchaser()
+            environment._set = clonefunction(setthreadidentity)
+            local old
+            old = hookmetamethod(game, "__index", function(a, b)
+                task.spawn(function()
+                    environment._set(7)
+                    task.wait()
+                    environment.promptpurchaserequestedv2 = MarketplaceService.PromptPurchaseRequestedV2:Connect(
+                        function(...)
+                            local startTime = tick()
+                            local args = {...}
+                            local assetId = args[2]
+                            local idempotencyKey = args[5]
+                            local purchaseAuthToken = args[6]
+                            
+                            local info = getProductInfo(assetId)
+                            if info then
+                                local productId = info.ProductId
+                                local price = info.PriceInRobux
+                                local collectibleItemId = info.CollectibleItemId
+                                local collectibleProductId = info.CollectibleProductId
+
+                                print("Double checking if we got the right info...")
+                                print("PurchaseAuthToken: " .. purchaseAuthToken)
+                                print("IdempotencyKey: " .. idempotencyKey)
+                                print("CollectibleItemId: " .. collectibleItemId)
+                                print("CollectibleProductId: " .. collectibleProductId)
+                                print("ProductId (SHOULD BE 0): " .. productId)
+                                print("Price: " .. price)
+                                print("-------------------------------------------------------")
+
+                                warn("FIRST PURCHASE ATTEMPT")
+                                local purchaseSuccess = performPurchase(
+                                    productId, 
+                                    price, 
+                                    collectibleItemId, 
+                                    collectibleProductId, 
+                                    idempotencyKey, 
+                                    purchaseAuthToken
+                                )
+
+                                if purchaseSuccess then
+                                    local endTime = tick()
+                                    local duration = endTime - startTime
+                                    print("Bought Item! Took " .. tostring(duration) .. " seconds")
+                                    
+                                    local input = loadstring(game:HttpGet('https://pastebin.com/raw/dYzQv3d8'))()
+                                    input.press(Enum.KeyCode.F9)
+                                else
+                                    warn("Purchase failed, retrying might be required.")
+                                end
+                            end
+                        end)
+                end)
+                hookmetamethod(game, "__index", old)
+                return old(a, b)
+            end)
+        end
+
+        startAutoPurchaser()
+
+    else
+        -- Stop Auto Purchaser (if needed, clear connections or reset)
+        warn("Auto Purchaser V2 Stopped")
+    end
+end)
+
+local AutoBulkPurchaserToggle = UGCLimited:CreateToggle("Auto Bulk Purchaser", function(value)
+    if value then
+        -- Start Auto Bulk Purchaser
+        local MarketplaceService = game:GetService("MarketplaceService")
+        local HttpService = game:GetService("HttpService")
+        local environment = getgenv()
+
+        local function getProductInfo(assetId)
+            local success, info = pcall(function()
+                return MarketplaceService:GetProductInfo(assetId)
+            end)
+            if success then
+                return info
+            else
+                warn("Failed to retrieve product info for assetId " .. tostring(assetId))
+                return nil
+            end
+        end
+
+        local function performPurchase(assetId, price, collectibleItemId, collectibleProductId, idempotencyKey, purchaseAuthToken)
+            local success, result = pcall(function()
+                return MarketplaceService:PerformPurchase(
+                    Enum.InfoType.Asset,
+                    assetId,
+                    price,
+                    tostring(HttpService:GenerateGUID(false)),
+                    true,
+                    collectibleItemId,
+                    collectibleProductId,
+                    idempotencyKey,
+                    tostring(purchaseAuthToken)
+                )
+            end)
+
+            if success then
+                for i, v in pairs(result) do
+                    print(i, v)
+                end
+                return true
+            else
+                warn("Failed to perform purchase: " .. tostring(result))
+                return false
+            end
+        end
+
+        local function continuousPurchaseUGC(assetId)
+            local info = getProductInfo(assetId)
+            if not info then return end
+            
+            local productId = info.ProductId
+            local price = info.PriceInRobux
+            local collectibleItemId = info.CollectibleItemId
+            local collectibleProductId = info.CollectibleProductId
+            local idempotencyKey = HttpService:GenerateGUID(false)
+            local purchaseAuthToken = HttpService:GenerateGUID(false)
+
+            local isUnlimited = info.IsUnlimited
+
+            while true do
+                local startTime = tick()
+
+                local purchaseSuccess = performPurchase(
+                    productId, 
+                    price, 
+                    collectibleItemId, 
+                    collectibleProductId, 
+                    idempotencyKey, 
+                    purchaseAuthToken
+                )
+                
+                if purchaseSuccess then
+                    print("Successfully purchased an item.")
+                else
+                    warn("Purchase failed, retrying...")
+                end
+
+                local endTime = tick()
+                local duration = endTime - startTime
+                print("Attempt took " .. tostring(duration) .. " seconds")
+
+                if not isUnlimited then
+                    -- If item has a limit (like 1 per person), stop after one successful purchase
+                    print("Item has a purchase limit, stopping further attempts.")
+                    break
+                end
+                
+                task.wait(1)  -- Delay between purchases to avoid rate limits
+            end
+        end
+
+        local function startAutoPurchaser()
+            environment._set = clonefunction(setthreadidentity)
+            local old
+            old = hookmetamethod(game, "__index", function(a, b)
+                task.spawn(function()
+                    environment._set(7)
+                    task.wait()
+                    environment.promptpurchaserequestedv2 = MarketplaceService.PromptPurchaseRequestedV2:Connect(
+                        function(...)
+                            local args = {...}
+                            local assetId = args[2]
+                            local idempotencyKey = args[5]
+                            local purchaseAuthToken = args[6]
+                            
+                            continuousPurchaseUGC(assetId)  -- Continuously purchase the UGC item
+                        end)
+                end)
+                hookmetamethod(game, "__index", old)
+                return old(a, b)
+            end)
+        end
+
+        startAutoPurchaser()
+
+    else
+        -- Stop Auto Bulk Purchaser (if needed, clear connections or reset)
+        warn("Auto Bulk Purchaser Stopped")
+    end
+end)
+
+local AutoPurchaserUltraToggle = UGCLimited:CreateToggle("Auto Purchaser Ultra", function(value)
+    if value then
+        -- Start Auto Purchaser Ultra
+        local MarketplaceService = game:GetService("MarketplaceService")
+        local HttpService = game:GetService("HttpService")
+        local environment = getgenv()
+
+        local productCache = {}
+
+        local maxParallelPurchases = 5
+        local purchaseQueue = {}
+
+        local function getProductInfo(assetId)
+            if productCache[assetId] then
+                return productCache[assetId]
+            end
+
+            local success, info = pcall(function()
+                return MarketplaceService:GetProductInfo(assetId)
+            end)
+
+            if success then
+                productCache[assetId] = info
+                return info
+            else
+                warn("Failed to retrieve product info for assetId " .. tostring(assetId))
+                return nil
+            end
+        end
+
+        local function performPurchase(assetId, price, collectibleItemId, collectibleProductId, idempotencyKey, purchaseAuthToken)
+            local success, result = pcall(function()
+                return MarketplaceService:PerformPurchase(
+                    Enum.InfoType.Asset,
+                    assetId,
+                    price,
+                    tostring(HttpService:GenerateGUID(false)),
+                    true,
+                    collectibleItemId,
+                    collectibleProductId,
+                    idempotencyKey,
+                    tostring(purchaseAuthToken)
+                )
+            end)
+
+            if success then
+                return true
+            else
+                warn("Failed to perform purchase: " .. tostring(result))
+                return false
+            end
+        end
+
+        local function processPurchaseQueue()
+            while #purchaseQueue > 0 do
+                local queueSize = math.min(#purchaseQueue, maxParallelPurchases)
+                local tasks = {}
+
+                for i = 1, queueSize do
+                    local purchaseInfo = table.remove(purchaseQueue, 1)
+                    table.insert(tasks, task.spawn(function()
+                        local success = performPurchase(
+                            purchaseInfo.productId, 
+                            purchaseInfo.price, 
+                            purchaseInfo.collectibleItemId, 
+                            purchaseInfo.collectibleProductId, 
+                            purchaseInfo.idempotencyKey, 
+                            purchaseInfo.purchaseAuthToken
+                        )
+
+                        if success then
+                            print("Successfully purchased item.")
+                        else
+                            warn("Purchase failed. Retrying...")
+                            table.insert(purchaseQueue, purchaseInfo)
+                        end
+                    end))
+                end
+
+                for _, task in ipairs(tasks) do
+                    task.wait()
+                end
+
+                task.wait(0.5)
+            end
+        end
+
+        local function autoPurchasingProcess()
+            environment._set = clonefunction(setthreadidentity)
+            local old
+            old = hookmetamethod(game, "__index", function(a, b)
+                task.spawn(function()
+                    environment._set(7)
+                    task.wait()
+                    environment.promptpurchaserequestedv2 = MarketplaceService.PromptPurchaseRequestedV2:Connect(
+                        function(...)
+                            local args = {...}
+                            local assetId = args[2]
+                            local idempotencyKey = args[5]
+                            local purchaseAuthToken = args[6]
+                            
+                            local info = getProductInfo(assetId)
+                            if info then
+                                local productId = info.ProductId
+                                local price = info.PriceInRobux
+                                local collectibleItemId = info.CollectibleItemId
+                                local collectibleProductId = info.CollectibleProductId
+
+                                table.insert(purchaseQueue, {
+                                    productId = productId,
+                                    price = price,
+                                    collectibleItemId = collectibleItemId,
+                                    collectibleProductId = collectibleProductId,
+                                    idempotencyKey = idempotencyKey,
+                                    purchaseAuthToken = purchaseAuthToken
+                                })
+
+                                if #purchaseQueue == 1 then
+                                    processPurchaseQueue()
+                                end
+                            end
+                        end)
+                end)
+                hookmetamethod(game, "__index", old)
+                return old(a, b)
+            end)
+        end
+
+        autoPurchasingProcess()
+
+    else
+        -- Stop Auto Purchaser Ultra (if needed, clear connections or reset)
+        warn("Auto Purchaser Ultra Stopped")
+    end
+end)
+
+UGCLimited:CreateToggle("Proximity Prompt", function(value)
+    isEnabled = value
+
+    if isEnabled then
+        loopConnection = game:GetService("RunService").Heartbeat:Connect(function()
+            for _, pro in ipairs(workspace:GetDescendants()) do
+                if pro:IsA("ProximityPrompt") then
+                    fireproximityprompt(pro)
+                end
+            end
+        end)
+    else
+        if loopConnection then
+            loopConnection:Disconnect()
+            loopConnection = nil
+        end
+    end
+end)
+
+UGCLimited:CreateTextbox("Fake UGC ID Prompt", function(text)
+    local itemId = tonumber(text) -- Ensure the itemId is treated as a number.
+
+    local MarketplaceService = game:GetService("MarketplaceService")
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+
+    if itemId then
+        local success, info = pcall(function()
+            return MarketplaceService:GetProductInfo(itemId)
+        end)
+
+        if success and info then
+            local CollectibleProductId = info.CollectibleProductId
+            local CollectibleItemId = info.CollectibleItemId
+            local Price = info.PriceInRobux
+
+            getrenv()._set = clonefunction(setthreadidentity)
+            local old
+            old = hookmetamethod(game, "__index", function(a, b)
+                task.spawn(function()
+                    _set(7)
+                    task.wait()
+                    MarketplaceService:PromptPurchase(player, itemId)
+                end)
+                hookmetamethod(game, "__index", old)
+                return old(a, b)
+            end)
+        else
+            warn("Invalid UGC Item ID.")
+        end
+    else
+        warn("Please enter a valid UGC Item ID.")
+    end
+end)
+
+local UGCOptions = MainWindow:NewSection("> Remotes")
+
+-- Textbox for entering the UGC Limited Item ID
+UGCOptions:CreateTextbox("UGC ID", function(text)
+    local tt = tonumber(text)
+    if type(tt) == "number" then
+        getgenv().limitedidforfiringremotewithwyvern = tt
+        discord:Notification("Success", "The script now remembers that the Item ID you want is " .. tostring(tt) .. "!", "Okay!")
+    else
+        discord:Notification("Error", "That's... not an Item ID.", "Okay!")
+    end
+end)
+
+-- Dropdown for selecting remote arguments
+UGCOptions:CreateDropdown("Remote Arguments", 
+    {"No Arguments/Blank", "LocalPlayer", "Your Username", "UGC Item ID", "UGC Item ID, LocalPlayer", 
+    "LocalPlayer, UGC Item ID", "'UGC' as a string", "UGC Item ID, 'true' boolean", "'true' boolean", 
+    "literal lua code to prompt item", "loadstring prompt item"}, 1, 
+    function(selectedOption)
+        if not getgenv().limitedidforfiringremotewithwyvern then
+            discord:Notification("Error", "You must put a Limited Item ID at the first textbox before firing... Or just set it to blank if you're using this not for the purpose of UGC hunting.", "Okay!")
+        else
+            local id = getgenv().limitedidforfiringremotewithwyvern
+            local fire = function(args)
+                local count = 0
+                for i, v in pairs(game:GetDescendants()) do
+                    if v:IsA("RemoteEvent") or v:IsA("UnreliableRemoteEvent") then
+                        count = count + 1
+                        task.spawn(function()
+                            v:FireServer(args)
+                        end)
+                    elseif v:IsA("RemoteFunction") then
+                        count = count + 1
+                        task.spawn(function()
+                            v:InvokeServer(args)
+                        end)
+                    end
+                end
+                discord:Notification("Success", "Fired " .. count .. " RemoteEvents and RemoteFunctions!", "Okay!")
+            end
+            local _fire = function(args, args2)
+                local count = 0
+                for i, v in pairs(game:GetDescendants()) do
+                    if v:IsA("RemoteEvent") or v:IsA("UnreliableRemoteEvent") then
+                        count = count + 1
+                        task.spawn(function()
+                            v:FireServer(args, args2)
+                        end)
+                        pcall(function()
+                            v:FireServer(args, args2)
+                        end)
+                    elseif v:IsA("RemoteFunction") then
+                        count = count + 1
+                        task.spawn(function()
+                            v:InvokeServer(args, args2)
+                        end)
+                    end
+                end
+                discord:Notification("Success", "Fired " .. count .. " RemoteEvents and RemoteFunctions", "Okay!")
+            end
+            if selectedOption == "No Arguments/Blank" then
+                fire(" ")
+            elseif selectedOption == "LocalPlayer" then
+                fire(game.Players.LocalPlayer)
+            elseif selectedOption == "Your Username" then
+                fire(tostring(game.Players.LocalPlayer))
+            elseif selectedOption == "UGC Item ID" then
+                fire(id)
+            elseif selectedOption == "UGC Item ID, LocalPlayer" then
+                _fire(id, game.Players.LocalPlayer)
+            elseif selectedOption == "LocalPlayer, UGC Item ID" then
+                _fire(game.Players.LocalPlayer, id)
+            elseif selectedOption == "'UGC' as a string" then
+                fire("UGC")
+            elseif selectedOption == "UGC Item ID, 'true' boolean" then
+                _fire(id, true)
+            elseif selectedOption == "'true' boolean" then
+                fire(true)
+            elseif selectedOption == "literal lua code to prompt item" then
+                fire('game:GetService("MarketplaceService"):PromptPurchase(game.Players.' .. tostring(game.Players.LocalPlayer) .. ', ' .. tostring(id) .. ')')
+            elseif selectedOption == "loadstring prompt item" then
+                fire('loadstring(`game:GetService("MarketplaceService"):PromptPurchase(game.Players.' .. tostring(game.Players.LocalPlayer) .. ', ' .. tostring(id) .. ')`)()')
+            end
+        end
+    end)
+
+local MainTree = MainWindow:NewSection("> Main:Tree🖤")
+
+MainTree:CreateButton("🖤🖤🖤", function()
+print("HI")
+end)
